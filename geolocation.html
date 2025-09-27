@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geotag Location Manager</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb;
+      color: #111;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark-mode { background: #111827; color: #f3f4f6; }
+
+    header {
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      transition: background 0.3s, border 0.3s;
+    }
+    body.dark-mode header { background: #1f2937; border-color: #374151; }
+
+    header h1 { font-size: 1.6rem; font-weight: 600; }
+    header p { font-size: 0.9rem; color: #555; }
+    body.dark-mode header p { color: #9ca3af; }
+
+    .back-link {
+      text-decoration: none;
+      font-weight: bold;
+      color: #2563eb;
+      margin-right: 15px;
+    }
+    body.dark-mode .back-link { color: #60a5fa; }
+
+    .dark-toggle {
+      background: #fff;
+      color: #111;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.3s, color 0.3s, border 0.3s;
+    }
+    body.dark-mode .dark-toggle {
+      background: #1f2937;
+      color: #f3f4f6;
+      border-color: #374151;
+    }
+
+    main { flex: 1; padding: 20px; }
+
+    .content-panel {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: background 0.3s, border 0.3s;
+    }
+    body.dark-mode .content-panel { background: #1f2937; border-color: #374151; }
+
+    h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 15px; }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9rem; }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: #fff; color: #111;
+      transition: background 0.3s, border 0.3s, color 0.3s;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: #2563eb; outline: none;
+    }
+    body.dark-mode .form-group input,
+    body.dark-mode .form-group textarea {
+      background: #111827; border-color: #374151; color: #f3f4f6;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+
+    .btn {
+      background: #2563eb; color: white;
+      border: none; padding: 10px 20px;
+      border-radius: 6px; cursor: pointer;
+      font-size: 0.9rem; font-weight: 500;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #1e40af; }
+    .btn-secondary { background: #dc2626; }
+    .btn-secondary:hover { background: #991b1b; }
+    .btn-get-location { background: #059669; }
+    .btn-get-location:hover { background: #065f46; }
+
+    .location-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .location-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      transition: background 0.3s, border 0.3s;
+    }
+    body.dark-mode .location-card { background: #111827; border-color: #374151; }
+    .location-card h3 { font-size: 1rem; font-weight: 600; color: #2563eb; margin-bottom: 8px; }
+    body.dark-mode .location-card h3 { color: #60a5fa; }
+    .location-card p { font-size: 0.9rem; margin-bottom: 6px; }
+    body.dark-mode .location-card p { color: #d1d5db; }
+
+    .location-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+    }
+    body.dark-mode .location-meta { border-color: #374151; }
+    .coordinates { font-family: monospace; font-size: 0.85rem; color: #555; }
+    body.dark-mode .coordinates { color: #9ca3af; }
+
+    .status-message {
+      padding: 10px 14px; border-radius: 6px;
+      font-size: 0.9rem; margin-bottom: 12px;
+    }
+    .status-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+    .empty-state {
+      text-align: center; padding: 40px 20px; font-size: 0.95rem; color: #666;
+    }
+    .empty-state h3 { margin-bottom: 8px; color: #2563eb; }
+    body.dark-mode .empty-state { color: #9ca3af; }
+    body.dark-mode .empty-state h3 { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>📍 GeoTag Admin</h1>
+      <p>Manage geotagged locations</p>
+    </div>
+    <div>
+      <a href="index.html" class="back-link">← Back</a>
+      <button id="dark-toggle" class="dark-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Admin Panel -->
+    <div class="content-panel">
+      <h2>📍 Add New Location</h2>
+      <div id="admin-status"></div>
+      <form id="location-form">
+        <div class="form-group">
+          <label for="name">Location Name *</label>
+          <input type="text" id="name" required>
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="latitude">Latitude *</label>
+            <input type="number" id="latitude" step="any" required>
+          </div>
+          <div class="form-group">
+            <label for="longitude">Longitude *</label>
+            <input type="number" id="longitude" step="any" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="category">Category</label>
+          <input type="text" id="category">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn">📍 Add</button>
+          <button type="button" class="btn btn-get-location" onclick="getCurrentLocation()">📱 Use My Location</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Locations List -->
+    <div class="content-panel">
+      <h2>🗺️ Manage Locations</h2>
+      <div id="user-status"></div>
+      <div id="location-list"></div>
+    </div>
+  </main>
+
+  <script>
+    let editingId = null;
+    let locations = [
+      { id: 1, name: "Sample Office", description: "Main office", latitude: 40.7580, longitude: -73.9855, category: "Office", dateAdded: new Date().toLocaleString() }
+    ];
+    let nextId = 2;
+
+    document.addEventListener("DOMContentLoaded", () => { renderLocations(); document.getElementById("location-form").addEventListener("submit", handleAddLocation); });
+
+    function handleAddLocation(e) {
+  e.preventDefault();
+  const name = nameField().value.trim();
+  const description = descField().value.trim();
+  const lat = parseFloat(latField().value);
+  const lng = parseFloat(lngField().value);
+  const cat = catField().value.trim();
+
+  if (!name || isNaN(lat) || isNaN(lng)) return showStatus("admin","Fill required fields.","error");
+  if (lat<-90||lat>90||lng<-180||lng>180) return showStatus("admin","Invalid coordinates.","error");
+
+  if (editingId) {
+    // update existing location
+    const loc = locations.find(l => l.id === editingId);
+    if (loc) {
+      loc.name = name;
+      loc.description = description;
+      loc.latitude = lat;
+      loc.longitude = lng;
+      loc.category = cat;
+      showStatus("admin", `"${name}" updated!`, "success");
+    }
+    editingId = null;
+    document.querySelector("#location-form button[type='submit']").textContent = "📍 Add";
+  } else {
+    // add new
+    locations.push({ id: nextId++, name, description, latitude: lat, longitude: lng, category: cat, dateAdded: new Date().toLocaleString() });
+    showStatus("admin", `"${name}" added!`, "success");
+  }
+
+  e.target.reset();
+  renderLocations();
+}
+function editLocation(id) {
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+
+  nameField().value = loc.name;
+  descField().value = loc.description;
+  latField().value = loc.latitude;
+  lngField().value = loc.longitude;
+  catField().value = loc.category;
+
+  editingId = id;
+  document.querySelector("#location-form button[type='submit']").textContent = "✏️ Update";
+  showStatus("admin", `Editing "${loc.name}"...`, "success");
+}
+
+    function getCurrentLocation() {
+      if (!navigator.geolocation) return showStatus("admin","Geolocation not supported.","error");
+      showStatus("admin","Getting location...","success");
+      navigator.geolocation.getCurrentPosition(pos=>{
+        latField().value = pos.coords.latitude.toFixed(6);
+        lngField().value = pos.coords.longitude.toFixed(6);
+        showStatus("admin","Location retrieved!","success");
+      },err=>showStatus("admin","Location error.","error"));
+    }
+    function renderLocations() {
+      const list = document.getElementById("location-list");
+      if (!locations.length) return list.innerHTML=`<div class="empty-state"><h3>No locations</h3><p>Add one above.</p></div>`;
+      list.innerHTML = `<div class="location-grid">${locations.map(l=>`
+        <div class="location-card">
+          <h3>${l.name}</h3>
+          ${l.description?`<p><strong>Description:</strong> ${l.description}</p>`:""}
+          ${l.category?`<p><strong>Category:</strong> ${l.category}</p>`:""}
+          <p><strong>Added:</strong> ${l.dateAdded}</p>
+          <div class="location-meta">
+            <span class="coordinates">${l.latitude.toFixed(6)}, ${l.longitude.toFixed(6)}</span>
+            <button class="btn" onclick="editLocation(${l.id})">✏️ Edit</button>
+            <button class="btn btn-secondary" onclick="deleteLocation(${l.id})">🗑️ Delete</button>
+          </div>
+        </div>`).join("")}</div>`;
+    }
+    function deleteLocation(id){ locations=locations.filter(l=>l.id!==id); renderLocations(); showStatus("user","Location deleted.","success"); }
+    function showStatus(panel,msg,type){ const el=document.getElementById(panel+"-status"); el.innerHTML=`<div class="status-message status-${type}">${msg}</div>`; if(type==="success") setTimeout(()=>el.innerHTML="",3000); }
+    function toggleDarkMode(){ document.body.classList.toggle("dark-mode"); document.getElementById("dark-toggle").textContent=document.body.classList.contains("dark-mode")?"☀️ Light Mode":"🌙 Dark Mode"; }
+    const nameField=()=>document.getElementById("name"), descField=()=>document.getElementById("description"), latField=()=>document.getElementById("latitude"), lngField=()=>document.getElementById("longitude"), catField=()=>document.getElementById("category");
+  </script>
+</body>
+</html>
